@@ -1,3 +1,4 @@
+
 <?php
 namespace MyBox\Models;
 
@@ -9,21 +10,66 @@ final class Usuario
     {
     }
 
-    public function findByCredentials(string $username, string $password): ?array
+    // Buscar un usuario por su nombre de usuario.
+    public function findByUsername(string $username): ?array
     {
         $query = $this->db->prepare(
-            'SELECT nombre, usuario FROM usuarios WHERE usuario = ? AND contra = MD5(?)'
+            'SELECT id, usuario, nombre, correo, password
+             FROM usuarios
+             WHERE usuario = ?'
         );
-        $query->execute([$username, $password]);
+
+        $query->execute([$username]);
+
         $user = $query->fetch();
+
         return $user ?: null;
     }
 
-    public function create(string $username, string $password, string $name, string $email): void
-    {
-        $query = $this->db->prepare(
-            'INSERT INTO usuarios (usuario, contra, nombre, email) VALUES (?, MD5(?), ?, ?)'
+    // Comprobar las credenciales del usuario.
+    public function findByCredentials(
+        string $username,
+        string $password
+    ): ?array {
+        $user = $this->findByUsername($username);
+
+        if (!$user) {
+            return null;
+        }
+
+        if (!password_verify($password, $user['password'])) {
+            return null;
+        }
+
+        // No devolver el hash de la contraseña.
+        unset($user['password']);
+
+        return $user;
+    }
+
+    // Registrar un usuario nuevo.
+    public function create(
+        string $username,
+        string $password,
+        string $name,
+        string $email
+    ): void {
+        $hashedPassword = password_hash(
+            $password,
+            PASSWORD_DEFAULT
         );
-        $query->execute([$username, $password, $name, $email]);
+
+        $query = $this->db->prepare(
+            'INSERT INTO usuarios
+             (usuario, password, nombre, correo)
+             VALUES (?, ?, ?, ?)'
+        );
+
+        $query->execute([
+            $username,
+            $hashedPassword,
+            $name,
+            $email
+        ]);
     }
 }
