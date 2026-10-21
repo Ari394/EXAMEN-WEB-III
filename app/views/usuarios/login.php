@@ -3,7 +3,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
     <title>Iniciar sesión - myBox</title>
 </head>
 <body>
@@ -12,20 +13,27 @@
 
     <?php if (!empty($error)): ?>
         <p style="color: red;">
-            <?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
+            <?= htmlspecialchars(
+                $error,
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>
         </p>
     <?php endif; ?>
 
-    <form action="/login" method="POST">
+    <form action="index.php?action=autenticar"
+          method="POST">
 
-     
         <input
             type="hidden"
             name="csrf_token"
-            value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+            value="<?= htmlspecialchars(
+                $_SESSION['csrf_token'] ?? '',
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>"
         >
 
-        
         <label for="usuario">Usuario:</label>
         <input
             type="text"
@@ -38,7 +46,6 @@
 
         <br><br>
 
-    
         <label for="password">Contraseña:</label>
         <input
             type="password"
@@ -50,7 +57,6 @@
 
         <br><br>
 
-        
         <button type="submit">
             Ingresar
         </button>
@@ -59,7 +65,9 @@
 
     <p>
         ¿No tienes cuenta?
-        <a href="/registro">Regístrate aquí</a>
+        <a href="index.php?action=registro">
+            Regístrate aquí
+        </a>
     </p>
 
 </body>

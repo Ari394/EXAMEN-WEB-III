@@ -1,194 +1,37 @@
-
 <?php
 namespace MyBox\Models;
-
 use PDO;
-use RuntimeException;
-
-final class Archivo
-{
-    private const MAX_FILE_SIZE = 20 * 1024 * 1024;
-
-    public function __construct(private PDO $db)
-    {
-    }
-
-    // Listar archivos del usuario en una carpeta.
-    public function listForUser(
-        int $userId,
-        ?int $folderId = null
-    ): array {
-        $sql = '
-            SELECT
-                id,
-                nombre,
-                comentario,
-                tipo,
-                tamano,
-                fecha_subida,
-                carpeta_id
-            FROM archivos
-            WHERE usuario_id = :usuario_id
-        ';
-
-        if ($folderId === null) {
-            $sql .= ' AND carpeta_id IS NULL';
-        } else {
-            $sql .= ' AND carpeta_id = :carpeta_id';
-        }
-
-        $sql .= ' ORDER BY fecha_subida DESC';
-
-        $query = $this->db->prepare($sql);
-
-        $query->bindValue(
-            ':usuario_id',
-            $userId,
-            PDO::PARAM_INT
-        );
-
-        if ($folderId !== null) {
-            $query->bindValue(
-                ':carpeta_id',
-                $folderId,
-                PDO::PARAM_INT
-            );
-        }
-
-        $query->execute();
-
-        return $query->fetchAll();
-    }
-
-    // Subir un archivo y guardar su contenido en MySQL.
-    public function upload(
-        int $userId,
-        ?int $folderId,
-        array $file,
-        string $comment = ''
-    ): int {
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            throw new RuntimeException(
-                'No se pudo recibir el archivo.'
-            );
-        }
-
-        $size = (int) $file['size'];
-
-        if ($size <= 0 || $size > self::MAX_FILE_SIZE) {
-            throw new RuntimeException(
-                'El archivo debe tener un tamaño máximo de 20 MB.'
-            );
-        }
-
-        if (mb_strlen($comment) > 50) {
-            throw new RuntimeException(
-                'El comentario no puede superar 50 caracteres.'
-            );
-        }
-
-        $temporaryPath = $file['tmp_name'];
-
-        if (!is_uploaded_file($temporaryPath)) {
-            throw new RuntimeException(
-                'El archivo recibido no es válido.'
-            );
-        }
-
-        $content = file_get_contents($temporaryPath);
-
-        if ($content === false) {
-            throw new RuntimeException(
-                'No se pudo leer el archivo.'
-            );
-        }
-
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))
-            ->file($temporaryPath);
-
-        $name = basename(
-            str_replace('\\', '/', $file['name'])
-        );
-
-        $query = $this->db->prepare(
-            'INSERT INTO archivos
-                (nombre, comentario, tipo, tamano,
-                 contenido, usuario_id, carpeta_id)
-             VALUES
-                (:nombre, :comentario, :tipo, :tamano,
-                 :contenido, :usuario_id, :carpeta_id)'
-        );
-
-        $query->bindValue(':nombre', $name);
-        $query->bindValue(':comentario', $comment);
-        $query->bindValue(':tipo', $mime);
-        $query->bindValue(
-            ':tamano',
-            $size,
-            PDO::PARAM_INT
-        );
-        $query->bindValue(
-            ':contenido',
-            $content,
-            PDO::PARAM_LOB
-        );
-        $query->bindValue(
-            ':usuario_id',
-            $userId,
-            PDO::PARAM_INT
-        );
-
-        if ($folderId === null) {
-            $query->bindValue(
-                ':carpeta_id',
-                null,
-                PDO::PARAM_NULL
-            );
-        } else {
-            $query->bindValue(
-                ':carpeta_id',
-                $folderId,
-                PDO::PARAM_INT
-            );
-        }
-
-        $query->execute();
-
-        return (int) $this->db->lastInsertId();
-    }
-
-    // Buscar un archivo propio por su ID.
-    public function findById(
-        int $fileId,
-        int $userId
-    ): ?array {
-        $query = $this->db->prepare(
-            'SELECT *
-             FROM archivos
-             WHERE id = ?
-               AND usuario_id = ?'
-        );
-
-        $query->execute([$fileId, $userId]);
-
-        $file = $query->fetch();
-
-        return $file ?: null;
-    }
-
-    // Eliminar un archivo propio.
-    public function delete(
-        int $fileId,
-        int $userId
-    ): bool {
-        $query = $this->db->prepare(
-            'DELETE FROM archivos
-             WHERE id = ?
-               AND usuario_id = ?'
-        );
-
-        $query->execute([$fileId, $userId]);
-
-        return $query->rowCount() > 0;
-    }
+final class Archivo {
+ private const LIMIT=20971520;
+ public function __construct(private PDO $db){}
+ public function listForUser(int $userId,?int $folderId=null):array {
+  $folder=new Carpeta($this->db);
+  if($folderId!==null && !$folder->canRead($folderId,$userId))throw new \RuntimeException('Sin permiso para ver archivos.');
+  $sql='SELECT id,nombre,comentario,tipo,tamano,fecha_subida,usuario_id,carpeta_id FROM archivos WHERE ';
+  if($folderId===null){$sql.='usuario_id=? AND carpeta_id IS NULL';$args=[$userId];}
+  else{$sql.='carpeta_id=?';$args=[$folderId];}
+  $q=$this->db->prepare($sql.' ORDER BY fecha_subida DESC');$q->execute($args);return $q->fetchAll();
+ }
+ public function upload(int $userId,?int $folderId,array $file,string $comment=''):int {
+  if($folderId!==null && !(new Carpeta($this->db))->owns($folderId,$userId))throw new \RuntimeException('No puedes subir archivos a esa carpeta.');
+  if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)throw new \RuntimeException('Error al recibir el archivo.');
+  $path=$file['tmp_name']??'';$size=(int)($file['size']??0);
+  if($size<1 || $size>self::LIMIT || !is_uploaded_file($path))throw new \RuntimeException('Archivo inválido o supera 20 MiB.');
+  if(mb_strlen($comment)>50)throw new \InvalidArgumentException('Comentario máximo 50 caracteres.');
+  $name=basename(str_replace('\\','/',(string)($file['name']??'')));
+  if($name==='' || mb_strlen($name)>255)throw new \InvalidArgumentException('Nombre de archivo inválido.');
+  $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path)?:'application/octet-stream';
+  $content=file_get_contents($path);if($content===false)throw new \RuntimeException('No se pudo leer el archivo.');
+  $q=$this->db->prepare('INSERT INTO archivos(nombre,comentario,tipo,tamano,contenido,usuario_id,carpeta_id) VALUES (?,?,?,?,?,?,?)');
+  $q->bindValue(1,$name);$q->bindValue(2,$comment);$q->bindValue(3,$mime);$q->bindValue(4,$size,PDO::PARAM_INT);$q->bindValue(5,$content,PDO::PARAM_LOB);$q->bindValue(6,$userId,PDO::PARAM_INT);$q->bindValue(7,$folderId,$folderId===null?PDO::PARAM_NULL:PDO::PARAM_INT);$q->execute();return (int)$this->db->lastInsertId();
+ }
+ public function findById(int $fileId,int $userId):?array {
+  $q=$this->db->prepare('SELECT id,nombre,tipo,tamano,contenido,usuario_id,carpeta_id FROM archivos WHERE id=?');$q->execute([$fileId]);$file=$q->fetch();
+  if(!$file)return null;
+  if((int)$file['usuario_id']!==$userId && ($file['carpeta_id']===null || !(new Carpeta($this->db))->canRead((int)$file['carpeta_id'],$userId)))return null;
+  return $file;
+ }
+ public function delete(int $fileId,int $userId):bool {
+  $q=$this->db->prepare('DELETE FROM archivos WHERE id=? AND usuario_id=?');$q->execute([$fileId,$userId]);return $q->rowCount()>0;
+ }
 }

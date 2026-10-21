@@ -1,25 +1,53 @@
--- Esquema adicional para las carpetas de MyBOX.
--- Ejecutar en la base de datos mybox que ya contiene la tabla usuarios.
 
+-- Esquema de carpetas y carpetas compartidas de myBox.
+-- Requiere la tabla usuarios(id INT AUTO_INCREMENT PRIMARY KEY).
+
+USE mybox;
+
+-- Carpetas y subcarpetas
 CREATE TABLE IF NOT EXISTS carpetas (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    usuario VARCHAR(15) NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    creada_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_carpetas_usuario_nombre (usuario, nombre),
-    KEY idx_carpetas_usuario (usuario)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    usuario_id INT NOT NULL,
+    carpeta_padre_id INT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-CREATE TABLE IF NOT EXISTS carpetas_compartidas (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    carpeta_id INT UNSIGNED NOT NULL,
-    usuario_compartido VARCHAR(15) NOT NULL,
-    compartida_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_carpeta_usuario_compartido (carpeta_id, usuario_compartido),
-    KEY idx_compartidas_usuario (usuario_compartido),
-    CONSTRAINT fk_compartidas_carpeta
-        FOREIGN KEY (carpeta_id) REFERENCES carpetas (id)
+    CONSTRAINT fk_carpetas_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_carpetas_padre
+        FOREIGN KEY (carpeta_padre_id)
+        REFERENCES carpetas(id)
         ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+-- Carpetas compartidas
+CREATE TABLE IF NOT EXISTS carpetas_compartidas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    carpeta_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    fecha_compartido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_carpeta_usuario (
+        carpeta_id,
+        usuario_id
+    ),
+
+    CONSTRAINT fk_compartidas_carpeta
+        FOREIGN KEY (carpeta_id)
+        REFERENCES carpetas(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_compartidas_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;

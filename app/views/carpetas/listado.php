@@ -1,80 +1,21 @@
-<?php
-function carpetas_h(string $value): string
-{
-    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-}
-$scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
-$basePath = dirname($scriptPath);
-if (strpos($scriptPath, '/app/views/carpetas/') !== false) {
-    $basePath = dirname(dirname(dirname($basePath)));
-}
-$baseHref = rtrim(str_replace('\\', '/', $basePath), '/') . '/';
-?>
 <!doctype html>
-<html lang="es">
-<head>
-    <base href="<?= htmlspecialchars($baseHref, ENT_QUOTES, 'UTF-8') ?>">
-    <?php include __DIR__ . '/../../../sections/head.inc'; ?>
-    <title>Mis carpetas - MyBOX</title>
-</head>
-<body class="container-fluid">
-<header class="row"><?php include __DIR__ . '/../../../sections/header.inc'; ?></header>
-<main class="row">
-    <div class="panel panel-primary">
-        <div class="panel-heading"><strong>Mis carpetas</strong></div>
-        <div class="panel-body">
-            <p>
-                <a class="btn btn-primary" href="app/views/carpetas/nueva.php">Nueva carpeta</a>
-                <a class="btn btn-secondary" href="compartido.php">Compartido conmigo</a>
-                <a class="btn btn-secondary" href="agrearchi.php">Agregar archivo</a>
-            </p>
-            <?php if (!empty($error)): ?><div class="alert alert-danger"><?= carpetas_h($error) ?></div><?php endif; ?>
-            <table class="table table-striped">
-                <thead><tr><th>Nombre</th><th>Propietario</th><th>Fecha de creación</th><th>Compartir</th><th>Acción</th></tr></thead>
-                <tbody>
-                <?php foreach ($carpetas as $carpeta): ?>
-                    <tr>
-                        <td><?= carpetas_h($carpeta['nombre']) ?></td>
-                        <td><?= carpetas_h($carpeta['usuario']) ?></td>
-                        <td><?= carpetas_h($carpeta['creada_en']) ?></td>
-                        <td><a href="app/views/carpetas/compartir.php?id=<?= (int) $carpeta['id'] ?>">Compartir</a></td>
-                        <td>
-                            <form action="codes/borrarcarpeta.php" method="post" onsubmit="return confirm('¿Eliminar esta carpeta?');">
-                                <input type="hidden" name="id" value="<?= (int) $carpeta['id'] ?>">
-                                <button class="btn btn-danger btn-sm" type="submit">Borrar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (!$carpetas): ?><tr><td colspan="5">Aún no tienes carpetas.</td></tr><?php endif; ?>
-                </tbody>
-            </table>
-            <h2>Archivos de tu espacio</h2>
-            <?php if (!empty($archivos)): ?>
-                <table class="table table-striped">
-                    <thead><tr><th>Nombre</th><th>Tamaño</th><th>Último acceso</th><th>Archivo</th><th>Directorio</th><th>Lectura</th><th>Escritura</th><th>Ejecutable</th><th>Acción</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($archivos as $archivo): ?>
-                        <tr>
-                            <td><a href="abrarchi.php?arch=<?= rawurlencode($archivo['nombre']) ?>"><?= carpetas_h($archivo['nombre']) ?></a></td>
-                            <td><?= (int) $archivo['tamano'] ?> bytes</td>
-                            <td><?= date('d/m/Y H:i:s', (int) $archivo['ultimo_acceso']) ?></td>
-                            <td><?= $archivo['archivo'] ? 'Sí' : 'No' ?></td>
-                            <td><?= $archivo['directorio'] ? 'Sí' : 'No' ?></td>
-                            <td><?= $archivo['lectura'] ? 'Sí' : 'No' ?></td>
-                            <td><?= $archivo['escritura'] ? 'Sí' : 'No' ?></td>
-                            <td><?= $archivo['ejecutable'] ? 'Sí' : 'No' ?></td>
-                            <td><a href="codes/borrarchi.php?archi=<?= rawurlencode($archivo['nombre']) ?>">Borrar</a></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>La carpeta del usuario se encuentra vacía.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-</main>
-<footer class="row"><?php include __DIR__ . '/../../../sections/foot.inc'; ?></footer>
-</body>
-</html>
+<html lang="es"><head><meta charset="utf-8"><title>MyBox - Carpetas</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
+<h1>MyBox</h1><p>Hola, <?= h($_SESSION['nombre']??'') ?></p>
+<form method="post" action="index.php?action=logout"><?= csrf() ?><button>Salir</button></form>
+<nav><a href="index.php?action=carpetas">Mis carpetas</a> | <a href="index.php?action=compartidas">Compartidas conmigo</a></nav>
+<h2><?= $current===null?'Mi espacio':'Contenido de la carpeta' ?></h2>
+<?php if($current!==null):?><p><a href="index.php?action=carpetas">Volver a raíz</a></p><?php endif; ?>
+<h3>Carpetas</h3><ul>
+<?php foreach($carpetas as $c):?><li><a href="index.php?action=carpetas&folder=<?= (int)$c['id'] ?>"><?= h($c['nombre']) ?></a> (<?= h($c['propietario']) ?>)
+<?php if((int)$c['usuario_id']===$userId):?>
+<form style="display:inline" method="post" action="index.php?action=borrar-carpeta"><?= csrf() ?><input type="hidden" name="id" value="<?= (int)$c['id'] ?>"><input type="hidden" name="folder" value="<?= h($current??'') ?>"><button onclick="return confirm('¿Borrar carpeta y todo su contenido?')">Borrar</button></form>
+<form method="post" action="index.php?action=compartir"><?= csrf() ?><input type="hidden" name="id" value="<?= (int)$c['id'] ?>"><input name="usuario" placeholder="Usuario destinatario" required maxlength="50"><button>Compartir</button></form>
+<?php endif; ?></li><?php endforeach; ?></ul>
+<?php if($current===null || (new \MyBox\Models\Carpeta(\MyBox\Config\Database::connection()))->owns($current,$userId)): ?>
+<h3>Nueva carpeta</h3><form method="post" action="index.php?action=crear-carpeta"><?= csrf() ?><input type="hidden" name="folder" value="<?= h($current??'') ?>"><input name="nombre" maxlength="100" required><button>Crear</button></form>
+<h3>Subir archivo (máximo 20 MiB)</h3><form method="post" action="index.php?action=subir" enctype="multipart/form-data"><?= csrf() ?><input type="hidden" name="folder" value="<?= h($current??'') ?>"><input type="file" name="archivo" required><input name="comentario" maxlength="50" placeholder="Comentario"><button>Subir</button></form>
+<?php endif; ?>
+<h3>Archivos</h3><table border="1" cellpadding="6"><tr><th>Nombre</th><th>Comentario</th><th>Tipo</th><th>MB</th><th>Fecha</th><th>Acciones</th></tr>
+<?php foreach($archivos as $a):?><tr><td><?= h($a['nombre']) ?></td><td><?= h($a['comentario']) ?></td><td><?= h($a['tipo']) ?></td><td><?= number_format((int)$a['tamano']/1048576,2) ?></td><td><?= h($a['fecha_subida']) ?></td><td><a href="index.php?action=descargar&id=<?= (int)$a['id'] ?>">Ver / descargar</a>
+<?php if((int)$a['usuario_id']===$userId):?><form method="post" action="index.php?action=borrar-archivo"><?= csrf() ?><input type="hidden" name="id" value="<?= (int)$a['id'] ?>"><input type="hidden" name="folder" value="<?= h($current??'') ?>"><button>Borrar</button></form><?php endif; ?></td></tr><?php endforeach; ?></table>
+</body></html>
