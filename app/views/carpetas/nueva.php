@@ -1,7 +1,7 @@
 <?php
 session_start();
-if (($_SESSION['autenticado'] ?? '') !== 'SI') {
-    header('Location: ../../../index.php');
+if ((int) ($_SESSION['usuario_id'] ?? 0) < 1) {
+    header('Location: ../../../index.php?action=login');
     exit;
 }
 $error = $_SESSION['error_carpetas'] ?? '';
@@ -27,10 +27,20 @@ $baseHref = rtrim(str_replace('\\', '/', $basePath), '/') . '/';
     <div class="panel-body">
         <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
         <form action="codes/creadir.php" method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?= htmlspecialchars(
+                    $_SESSION['csrf_token'] ?? '',
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>"
+            >
+            <input type="hidden" name="folder" value="">
             <label for="nombre">Nombre de la carpeta</label>
             <input id="nombre" name="nombre" type="text" maxlength="100" required>
             <button class="btn btn-primary" type="submit">Crear carpeta</button>
-            <a class="btn btn-secondary" href="carpetas.php">Cancelar</a>
+            <a class="btn btn-secondary" href="index.php?action=carpetas">Cancelar</a>
         </form>
     </div>
 </div></main>
