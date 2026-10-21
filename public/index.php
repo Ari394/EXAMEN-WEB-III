@@ -1,4 +1,3 @@
-
 <?php
 declare(strict_types=1);
 
@@ -237,9 +236,6 @@ try {
         case 'carpetas':
             $userId = requireLogin();
             $current = folderId($_GET['folder'] ?? null);
-
-            requireOwnedFolder($userId, $current);
-
             $carpetasController = new Carpetas();
             $archivosController = new Archivos();
 
@@ -252,6 +248,28 @@ try {
                 $userId,
                 $current
             );
+
+            $breadcrumbs = $current === null
+                ? []
+                : $carpetasController->breadcrumbs(
+                    $current,
+                    $userId
+                );
+            $folderSharingStatuses = [];
+
+            foreach ($carpetas as $folder) {
+                $folderSharingStatuses[(int) $folder['id']]
+                    = $carpetasController->sharingStatus(
+                        (int) $folder['id'],
+                        $userId
+                    );
+            }
+
+            $currentSharingStatus = $current === null
+                ? ['compartida' => false, 'compartida_conmigo' => false]
+                : $carpetasController->sharingStatus($current, $userId);
+            $canManageCurrent = $current === null
+                || $carpetasController->owns($current, $userId);
 
             require dirname(__DIR__)
                 . '/app/views/carpetas/listado.php';
