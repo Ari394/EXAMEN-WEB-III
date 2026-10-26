@@ -185,6 +185,7 @@ $postActions = [
     'crear-carpeta',
     'borrar-carpeta',
     'compartir',
+    'dejar-compartir',
     'subir',
     'borrar-archivo'
 ];
@@ -289,6 +290,22 @@ try {
                 . '/app/views/carpetas/compartido_conmigo.php';
             break;
 
+        case 'nueva-carpeta':
+            $userId = requireLogin();
+
+            $current = folderId(
+                $_GET['folder'] ?? null
+            );
+
+            requireOwnedFolder($userId, $current);
+
+            $error = (string) ($_SESSION['error_carpetas'] ?? '');
+            unset($_SESSION['error_carpetas']);
+
+            require dirname(__DIR__)
+                . '/app/views/carpetas/nueva.php';
+            break;
+
         case 'crear-carpeta':
             $userId = requireLogin();
 
@@ -298,11 +315,19 @@ try {
 
             requireOwnedFolder($userId, $parent);
 
-            (new Carpetas())->create(
-                $userId,
-                (string) ($_POST['nombre'] ?? ''),
-                $parent
-            );
+            try {
+                (new Carpetas())->create(
+                    $userId,
+                    (string) ($_POST['nombre'] ?? ''),
+                    $parent
+                );
+            } catch (InvalidArgumentException $e) {
+                $_SESSION['error_carpetas'] = $e->getMessage();
+                redirect(
+                    'index.php?action=nueva-carpeta'
+                    . ($parent !== null ? '&folder=' . $parent : '')
+                );
+            }
 
             redirect(folderUrl($parent));
 
@@ -323,6 +348,36 @@ try {
 
             redirect(folderUrl($parent));
 
+        case 'compartir-carpeta':
+            $userId = requireLogin();
+
+            $id = requiredId($_GET['id'] ?? null);
+
+            requireOwnedFolder($userId, $id);
+
+            $current = folderId(
+                $_GET['folder'] ?? null
+            );
+            $compartirController = new Compartir();
+
+            $carpeta = (new Carpetas())->find($id, $userId);
+            $usuarios = $compartirController->availableUsers(
+                $id,
+                $userId
+            );
+            $destinatarios = $compartirController->recipients(
+                $id,
+                $userId
+            );
+
+            $error = (string) ($_SESSION['error_compartir'] ?? '');
+            $mensaje = (string) ($_SESSION['mensaje_compartir'] ?? '');
+            unset($_SESSION['error_compartir'], $_SESSION['mensaje_compartir']);
+
+            require dirname(__DIR__)
+                . '/app/views/carpetas/compartir.php';
+            break;
+
         case 'compartir':
             $userId = requireLogin();
 
@@ -330,13 +385,50 @@ try {
 
             requireOwnedFolder($userId, $id);
 
-            (new Compartir())->share(
-                $id,
-                $userId,
-                (string) ($_POST['usuario'] ?? '')
+            $current = folderId(
+                $_POST['folder'] ?? null
             );
 
-            redirect(folderUrl());
+            try {
+                (new Compartir())->share(
+                    $id,
+                    $userId,
+                    (string) ($_POST['usuario'] ?? '')
+                );
+                $_SESSION['mensaje_compartir'] = 'Carpeta compartida correctamente.';
+            } catch (PDOException $e) {
+                throw $e;
+            } catch (InvalidArgumentException | RuntimeException $e) {
+                $_SESSION['error_compartir'] = $e->getMessage();
+            }
+
+            redirect(
+                'index.php?action=compartir-carpeta&id=' . $id
+                . ($current !== null ? '&folder=' . $current : '')
+            );
+
+        case 'dejar-compartir':
+            $userId = requireLogin();
+
+            $id = requiredId($_POST['id'] ?? null);
+
+            requireOwnedFolder($userId, $id);
+
+            $current = folderId(
+                $_POST['folder'] ?? null
+            );
+
+            (new Compartir())->unshare(
+                $id,
+                $userId,
+                requiredId($_POST['usuario_id'] ?? null)
+            );
+            $_SESSION['mensaje_compartir'] = 'Se dejó de compartir la carpeta.';
+
+            redirect(
+                'index.php?action=compartir-carpeta&id=' . $id
+                . ($current !== null ? '&folder=' . $current : '')
+            );
 
         case 'subir':
             $userId = requireLogin();

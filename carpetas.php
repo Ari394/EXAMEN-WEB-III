@@ -1,22 +1,15 @@
 <?php
-session_start();
-if (($_SESSION['autenticado'] ?? '') !== 'SI') {
-    header('Location: index.php');
-    exit;
+// La vista de carpetas la atiende el controlador frontal MVC (public/index.php),
+// que prepara permisos, breadcrumbs y estado de compartición.
+$url = 'public/index.php?action=carpetas';
+
+$folder = filter_input(INPUT_GET, 'folder', FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 1]
+]);
+
+if ($folder) {
+    $url .= '&folder=' . $folder;
 }
 
-require_once __DIR__ . '/app/config/Database.php';
-require_once __DIR__ . '/app/models/Carpeta.php';
-require_once __DIR__ . '/app/models/Archivo.php';
-require_once __DIR__ . '/app/controllers/Carpetas.php';
-require_once __DIR__ . '/app/controllers/Archivos.php';
-
-try {
-    $carpetas = (new \MyBox\Controllers\Carpetas())->index($_SESSION['usuario']);
-    $archivos = (new \MyBox\Controllers\Archivos())->listForUser($_SESSION['usuario']);
-    require __DIR__ . '/app/views/carpetas/listado.php';
-} catch (\Throwable $exception) {
-    error_log('Unable to load folders: ' . $exception->getMessage());
-    http_response_code(500);
-    echo 'No se pudieron cargar las carpetas. Verifica la conexión de base de datos y la configuración de MyBox.';
-}
+header('Location: ' . $url);
+exit;
