@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyBox - Carpetas</title>
+    <link rel="stylesheet" href="../styles/mybox.css">
 </head>
 <body>
     <h1>MyBox</h1>
