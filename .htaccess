@@ -8,11 +8,10 @@ RewriteEngine on
 #---------------------------------------------------------------------
 # En caso de error presentar páginas personalizadas
 #---------------------------------------------------------------------
-ErrorDocument 400 http://localhost:8088/2026/mybox/errores/400.php
-ErrorDocument 403 http://localhost:8088/2026/mybox/errores/403.php
-ErrorDocument 404 http://localhost:8088/2026/mybox/errores/404.php
-ErrorDocument 500 http://localhost:8088/2026/mybox/errores/500.php
-
+ErrorDocument 400 /EXAMEN-WEB-III/errors/400.php
+ErrorDocument 403 /EXAMEN-WEB-III/errors/403.php
+ErrorDocument 404 /EXAMEN-WEB-III/errors/404.php
+ErrorDocument 500 /EXAMEN-WEB-III/errors/500.php
 
 #---------------------------------------------------------------------
 # Evita tener acceso a los archivos con las siguientes extensiones
@@ -22,3 +21,16 @@ ErrorDocument 500 http://localhost:8088/2026/mybox/errores/500.php
     Deny from all
     Satisfy All
 </FilesMatch>
+
+
+#---------------------------------------------------
+# ACCESO RESTRINGIDO A 3 IP DEL LABORATORIO
+#---------------------------------------------------
+# Cuando tengamos las IP reales, quitaremos el #
+# de las siguientes líneas y cambiaremos las IP.
+
+# <RequireAny>
+#     Require ip 
+#     Require ip 
+#     Require ip 
+# </RequireAny>

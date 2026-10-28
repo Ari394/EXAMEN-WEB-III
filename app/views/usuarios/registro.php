@@ -6,6 +6,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
     <title>Registro - myBox</title>
+    <link rel="stylesheet" href="../styles/mybox.css">
 </head>
 <body>
 
