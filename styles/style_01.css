@@ -54,3 +54,28 @@ body{
     display: block;
     float:left;
 }
+
+/* Vistas MVC de carpetas */
+.mybox-app{
+    background-color: #eef3f8;
+}
+
+.mybox-contenido{
+    padding-bottom: 40px;
+}
+
+.mybox-contenido .card{
+    background-color: rgba(255, 255, 255, 0.96);
+}
+
+.mybox-formulario{
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+/* mybox.css da estilo a todos los <nav>; la barra superior fija no lo lleva */
+.mybox-app > nav.navbar{
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+}

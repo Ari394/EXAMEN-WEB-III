@@ -15,10 +15,7 @@
                     <a class="nav-link" href="carpetas.php">Carpetas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Opción 1</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#">Opción 2</a>
+                    <a class="nav-link" href="compartido.php">Compartido conmigo</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="codes/salir.php">Salir</a>

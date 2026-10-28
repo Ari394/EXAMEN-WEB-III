@@ -17,6 +17,19 @@ final class Carpeta {
         return (bool) $query->fetchColumn();
     }
 
+    public function findOwned(int $id, int $userId): ?array
+    {
+        $query = $this->db->prepare(
+            'SELECT id, nombre, carpeta_padre_id, fecha_creacion
+             FROM carpetas
+             WHERE id = ? AND usuario_id = ?'
+        );
+        $query->execute([$id, $userId]);
+        $folder = $query->fetch();
+
+        return $folder ?: null;
+    }
+
     public function canRead(int $id, int $userId): bool
     {
         $query = $this->db->prepare(
@@ -115,6 +128,7 @@ final class Carpeta {
     {
         $query = $this->db->prepare(
             'SELECT c.id, c.nombre, c.fecha_creacion,
+                    cc.fecha_compartido,
                     u.usuario AS propietario
              FROM carpetas_compartidas cc
              JOIN carpetas c ON c.id = cc.carpeta_id
@@ -153,19 +167,28 @@ final class Carpeta {
             ORDER BY depth DESC'
         );
         $query->execute([$id]);
+        $trail = $query->fetchAll();
 
-        return $query->fetchAll();
+        // Quien recibe una carpeta compartida no debe ver las carpetas
+        // superiores del propietario: la ruta empieza en la primera legible.
+        foreach ($trail as $index => $folder) {
+            if ($this->canRead((int) $folder['id'], $userId)) {
+                return array_slice($trail, $index);
+            }
+        }
+
+        return [];
     }
 
     public function sharingStatus(int $id, int $userId): array
     {
         $query = $this->db->prepare(
             'WITH RECURSIVE ancestors AS (
-                SELECT id, carpeta_padre_id
+                SELECT id, carpeta_padre_id, usuario_id
                 FROM carpetas
                 WHERE id = ?
                 UNION ALL
-                SELECT parent.id, parent.carpeta_padre_id
+                SELECT parent.id, parent.carpeta_padre_id, parent.usuario_id
                 FROM carpetas parent
                 JOIN ancestors child
                   ON child.carpeta_padre_id = parent.id
@@ -174,7 +197,8 @@ final class Carpeta {
                 EXISTS (
                     SELECT 1
                     FROM carpetas_compartidas cc
-                    WHERE cc.carpeta_id = ?
+                    JOIN ancestors a ON a.id = cc.carpeta_id
+                    WHERE a.usuario_id = ?
                 ) AS compartida,
                 EXISTS (
                     SELECT 1
@@ -183,7 +207,7 @@ final class Carpeta {
                     WHERE cc.usuario_id = ?
                 ) AS compartida_conmigo'
         );
-        $query->execute([$id, $id, $userId]);
+        $query->execute([$id, $userId, $userId]);
         $status = $query->fetch();
 
         return [

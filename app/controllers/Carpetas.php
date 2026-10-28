@@ -19,6 +19,11 @@ final class Carpetas {
         return $this->model()->owns($folderId, $userId);
     }
 
+    public function find(int $folderId, int $userId): ?array
+    {
+        return $this->model()->findOwned($folderId, $userId);
+    }
+
     public function create(
         int $userId,
         string $name,
