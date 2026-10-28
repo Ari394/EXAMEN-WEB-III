@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 session_start();
 
+
 spl_autoload_register(function (string $class): void {
     $prefix = 'MyBox\\';
 
@@ -255,6 +256,7 @@ try {
                     $current,
                     $userId
                 );
+
             $folderSharingStatuses = [];
 
             foreach ($carpetas as $folder) {
@@ -268,6 +270,7 @@ try {
             $currentSharingStatus = $current === null
                 ? ['compartida' => false, 'compartida_conmigo' => false]
                 : $carpetasController->sharingStatus($current, $userId);
+
             $canManageCurrent = $current === null
                 || $carpetasController->owns($current, $userId);
 
@@ -362,6 +365,65 @@ try {
 
             redirect(folderUrl($folder));
 
+        // NUEVO: VISUALIZAR ARCHIVOS
+        case 'visualizar':
+            $userId = requireLogin();
+
+            $id = requiredId($_GET['id'] ?? null);
+
+            $file = (new Archivos())->findById(
+                $id,
+                $userId
+            );
+
+            if (!$file) {
+                http_response_code(404);
+                exit('Archivo no encontrado.');
+            }
+
+            $content = $file['contenido'];
+
+            if (is_resource($content)) {
+                $content = stream_get_contents($content);
+            }
+
+            if (!is_string($content)) {
+                throw new RuntimeException(
+                    'No se pudo leer el archivo.'
+                );
+            }
+
+            // Detectar el tipo real del archivo.
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->buffer($content);
+
+            // Solo permitir visualización de imágenes y PDF.
+            $allowedTypes = [
+                'application/pdf',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp'
+            ];
+
+            if (!in_array($mime, $allowedTypes, true)) {
+                http_response_code(415);
+                exit(
+                    'Este tipo de archivo no permite visualización. '
+                    . 'Usa Descargar.'
+                );
+            }
+
+            header('Content-Type: ' . $mime);
+            header('X-Content-Type-Options: nosniff');
+            header('Content-Disposition: inline');
+            header('Content-Security-Policy: sandbox');
+            header('Content-Length: ' . strlen($content));
+
+            echo $content;
+            exit;
+
+        // DESCARGAR ARCHIVOS
         case 'descargar':
             $userId = requireLogin();
 

@@ -1,9 +1,11 @@
+
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MyBox - Carpetas</title>
+    <link rel="stylesheet" href="../styles/mybox.css">
 </head>
 <body>
     <h1>MyBox</h1>
@@ -31,6 +33,7 @@
                 </a>
             <?php endforeach; ?>
         </nav>
+
         <?php if ($currentSharingStatus['compartida_conmigo']): ?>
             <p>Esta carpeta está compartida contigo. Tienes acceso de solo lectura.</p>
         <?php endif; ?>
@@ -80,6 +83,7 @@
                                     onclick="return confirm('¿Borrar carpeta y todo su contenido?')"
                                 >Borrar</button>
                             </form>
+
                             <form method="post" action="index.php?action=compartir">
                                 <?= csrf() ?>
                                 <input type="hidden" name="id" value="<?= (int) $folder['id'] ?>">
@@ -97,8 +101,11 @@
                     </td>
                 </tr>
             <?php endforeach; ?>
+
             <?php if ($carpetas === []): ?>
-                <tr><td colspan="5">No hay carpetas en este nivel.</td></tr>
+                <tr>
+                    <td colspan="5">No hay carpetas en este nivel.</td>
+                </tr>
             <?php endif; ?>
         </tbody>
     </table>
@@ -172,24 +179,42 @@
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a href="index.php?action=descargar&id=<?= (int) $file['id'] ?>">
-                            Ver / descargar
+                        <a
+                            href="index.php?action=visualizar&id=<?= (int) $file['id'] ?>"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            Ver archivo
                         </a>
+
+                        <a href="index.php?action=descargar&id=<?= (int) $file['id'] ?>">
+                            Descargar
+                        </a>
+
                         <?php if ((int) $file['usuario_id'] === $userId): ?>
                             <form method="post" action="index.php?action=borrar-archivo">
                                 <?= csrf() ?>
                                 <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
                                 <input type="hidden" name="folder" value="<?= h($current ?? '') ?>">
-                                <button type="submit">Borrar</button>
+                                <button
+                                    type="submit"
+                                    onclick="return confirm('¿Estás seguro de que deseas eliminar este archivo?')"
+                                >
+                                    Borrar
+                                </button>
                             </form>
                         <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
+
             <?php if ($archivos === []): ?>
-                <tr><td colspan="7">No hay archivos en este nivel.</td></tr>
+                <tr>
+                    <td colspan="7">No hay archivos en este nivel.</td>
+                </tr>
             <?php endif; ?>
         </tbody>
     </table>
 </body>
 </html>
+
